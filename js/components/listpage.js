@@ -131,20 +131,19 @@ function renderListUI(list) {
                     >
                     <button
                         type="submit"
-                        class="px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium"
-                        data-i18n="add"
-                    >Add</button>
+                        class="px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium text-xl"
+                    >+</button>
                 </div>
 
                 <!-- Expandable Options -->
                 <button type="button" id="toggle-options" class="text-sm text-green-600 hover:text-green-700 flex items-center gap-1">
-                    <span data-i18n="moreOptions">More options</span>
-                    <svg class="w-4 h-4 transition-transform" id="options-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span data-i18n="lessOptions">Less options</span>
+                    <svg class="w-4 h-4 transition-transform rotate-180" id="options-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
 
-                <div id="extra-options" class="hidden space-y-3">
+                <div id="extra-options" class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <input
                             type="text"

@@ -3,7 +3,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,11 +67,20 @@ serve(async (req) => {
       );
     }
 
-    // Hash password if provided
+    // Hash password using pgcrypto if provided
     let passwordHash: string | null = null;
     if (password && password.length > 0) {
-      const salt = await bcrypt.genSalt(10);
-      passwordHash = await bcrypt.hash(password, salt);
+      const { data: hashResult, error: hashError } = await supabaseClient
+        .rpc('hash_password', { pwd: password });
+
+      if (hashError) {
+        console.error("Hash error:", hashError);
+        return new Response(
+          JSON.stringify({ error: "Failed to process password" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      passwordHash = hashResult;
     }
 
     // Create the list

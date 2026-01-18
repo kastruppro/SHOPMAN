@@ -3,7 +3,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
@@ -17,7 +16,7 @@ interface VerifyPasswordRequest {
   action: "view" | "edit";
 }
 
-// Simple token generation (in production, consider using JWT)
+// Simple token generation
 function generateToken(listId: string, action: string): string {
   const payload = {
     list_id: listId,
@@ -63,7 +62,7 @@ serve(async (req) => {
       );
     }
 
-    // Get the list with password hash
+    // Get the list
     const { data: list, error: fetchError } = await supabaseClient
       .from("lists")
       .select("id, password_hash, view_requires_password, edit_requires_password")
@@ -82,24 +81,24 @@ serve(async (req) => {
       ? list.view_requires_password
       : list.edit_requires_password;
 
-    if (!requiresPassword) {
-      // No password required, return success
+    if (!requiresPassword || !list.password_hash) {
       return new Response(
         JSON.stringify({ success: true, token: generateToken(list_id, action) }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // No password hash stored (shouldn't happen, but handle it)
-    if (!list.password_hash) {
+    // Verify the password using pgcrypto
+    const { data: isValid, error: verifyError } = await supabaseClient
+      .rpc('verify_password', { pwd: password, pwd_hash: list.password_hash });
+
+    if (verifyError) {
+      console.error("Verify error:", verifyError);
       return new Response(
-        JSON.stringify({ success: true, token: generateToken(list_id, action) }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to verify password" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Verify the password
-    const isValid = await bcrypt.compare(password, list.password_hash);
 
     if (!isValid) {
       return new Response(
