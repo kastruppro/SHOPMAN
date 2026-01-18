@@ -1,0 +1,13 @@
+{
+  "name": "shopman",
+  "version": "1.0.0",
+  "description": "Shopping list web app with password protection and bilingual support",
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css --minify",
+    "watch:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css --watch",
+    "dev": "npm run watch:css"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

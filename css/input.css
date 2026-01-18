@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+@layer components {
+  /* Smooth transitions for interactive elements */
+  .btn-primary {
+    @apply px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-xl shadow-lg p-6;
+  }
+
+  /* Item card animation */
+  .item-card {
+    @apply bg-white rounded-lg shadow-sm p-3 transition-all duration-200;
+  }
+
+  .item-card:hover {
+    @apply shadow-md;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but allow scrolling */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Custom checkbox style */
+input[type="checkbox"] {
+  @apply rounded border-gray-300 text-green-500 focus:ring-green-500;
+}
+
+/* Focus visible for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  @apply ring-2 ring-green-500 ring-offset-2;
+}
+
+/* Smooth page transitions */
+#app {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
