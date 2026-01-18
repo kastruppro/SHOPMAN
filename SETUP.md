@@ -12,8 +12,8 @@
 
 ### Deploy Edge Functions
 ```bash
-# Install Supabase CLI
-npm install -g supabase
+# Install Supabase CLI (macOS)
+brew install supabase/tap/supabase
 
 # Login
 supabase login
@@ -48,13 +48,7 @@ npm run build:css
 2. Go to repository Settings > Pages
 3. Set Source to "Deploy from a branch"
 4. Select main branch and / (root) folder
-5. The CNAME file will configure shop.kastrup.pro
-
-## 5. DNS Setup
-
-Add a CNAME record:
-- Name: `shop`
-- Value: `kastruppro.github.io`
+5. (Optional) Add a CNAME file for custom domain
 
 ## Development
 

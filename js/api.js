@@ -1,6 +1,6 @@
 // Supabase API module
-const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+const SUPABASE_URL = 'https://wekhpejczeqdjxididog.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indla2hwZWpjemVxZGp4aWRpZG9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NzI1MjEsImV4cCI6MjA4NDM0ODUyMX0.eafOdpk0xa223Nca7SLmK8EZQGoEHVxpCq6gZjxWIaY';
 
 const api = {
     baseUrl: SUPABASE_URL,
