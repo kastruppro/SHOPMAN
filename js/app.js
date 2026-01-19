@@ -3,6 +3,7 @@ import i18n from './i18n.js';
 import router from './router.js';
 import store from './store.js';
 import sync from './sync.js';
+import config from './config.js';
 import pwaInstall from './pwa-install.js';
 import { renderHomepage } from './components/homepage.js';
 import { renderListPage } from './components/listpage.js';
@@ -36,6 +37,12 @@ async function registerServiceWorker() {
 }
 
 async function initApp() {
+    // Set version in footer
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) {
+        versionEl.textContent = `v${config.version}`;
+    }
+
     // Initialize i18n
     await i18n.init();
 

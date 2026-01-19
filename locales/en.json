@@ -90,5 +90,22 @@
   "followListDesc": "Make the list available offline",
   "enableNotifications": "Notifications",
   "enableNotificationsDesc": "Get notified when the list changes",
-  "savePassword": "Remember password"
+  "savePassword": "Remember password",
+  "archiveBought": "Archive bought items",
+  "deleteBought": "Delete bought items",
+  "deleteAll": "Delete all items",
+  "confirmDeleteAll": "Are you sure you want to delete all items?",
+  "archives": "Archives",
+  "noArchives": "No archived shopping trips",
+  "loadingArchives": "Loading archives...",
+  "archiveLoadError": "Failed to load archives",
+  "items": "items",
+  "more": "more",
+  "undo": "Undo",
+  "archivedBought": "Bought items archived",
+  "deletedBought": "Bought items deleted",
+  "deletedAll": "All items deleted",
+  "archiveDeleted": "Archive deleted",
+  "iosInstallInstructions": "Tap the share button and select \"Add to Home Screen\"",
+  "gotIt": "Got it"
 }

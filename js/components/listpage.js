@@ -7,6 +7,8 @@ import db from '../db.js';
 import { showPasswordModal } from './passwordmodal.js';
 
 let currentListName = null;
+let currentUndoData = null;
+let undoTimeout = null;
 
 export async function renderListPage(listName) {
     currentListName = listName;
@@ -275,13 +277,38 @@ function renderListUI(list) {
 
         <!-- Shopping List -->
         <div class="mb-6">
-            <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                </svg>
-                <span data-i18n="shoppingList">Shopping List</span>
-                <span class="text-sm font-normal text-gray-500">(${unboughtItems.length})</span>
-            </h2>
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <span data-i18n="shoppingList">Shopping List</span>
+                    <span class="text-sm font-normal text-gray-500">(${unboughtItems.length})</span>
+                </h2>
+                <!-- List Actions Dropdown -->
+                <div class="relative">
+                    <button id="list-actions-btn" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                        </svg>
+                    </button>
+                    <div id="list-actions-dropdown" class="hidden absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-20">
+                        <button id="archive-bought-btn" class="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 flex items-center gap-3 ${boughtItems.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${boughtItems.length === 0 ? 'disabled' : ''}>
+                            <span class="text-lg">📦</span>
+                            <span data-i18n="archiveBought">Arkiver købte varer</span>
+                        </button>
+                        <button id="delete-bought-btn" class="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 flex items-center gap-3 ${boughtItems.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${boughtItems.length === 0 ? 'disabled' : ''}>
+                            <span class="text-lg">🗑️</span>
+                            <span data-i18n="deleteBought">Slet købte varer</span>
+                        </button>
+                        <div class="border-t border-gray-100"></div>
+                        <button id="delete-all-btn" class="w-full px-4 py-3 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-3 ${items.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${items.length === 0 ? 'disabled' : ''}>
+                            <span class="text-lg">⚠️</span>
+                            <span data-i18n="deleteAll">Slet alle varer</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <div id="items-list" class="space-y-4">
                 ${unboughtItems.length === 0
@@ -306,6 +333,22 @@ function renderListUI(list) {
                     ? `<p class="text-gray-400 text-center py-4 bg-gray-50 rounded-lg" data-i18n="noBoughtItems">No bought items</p>`
                     : renderItemsByCategory(boughtItems, true)
                 }
+            </div>
+        </div>
+
+        <!-- Archives Section -->
+        <div id="archives-section" class="mb-6">
+            <button type="button" id="toggle-archives" class="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition mb-3">
+                <span class="text-lg">📦</span>
+                <span data-i18n="archives">Arkiv</span>
+                <span id="archives-count" class="text-sm font-normal">(0)</span>
+                <svg class="w-4 h-4 transition-transform" id="archives-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div id="archives-list" class="hidden space-y-3">
+                <!-- Archives will be loaded here -->
+                <p class="text-gray-400 text-center py-4 text-sm" data-i18n="loadingArchives">Indlæser arkiv...</p>
             </div>
         </div>
 
@@ -431,10 +474,19 @@ function renderListUI(list) {
                 </div>
             </div>
         </div>
+
+        <!-- Undo Toast -->
+        <div id="undo-toast" class="fixed bottom-4 left-4 right-4 max-w-lg mx-auto bg-gray-800 text-white rounded-lg shadow-lg p-4 flex items-center justify-between transform translate-y-full opacity-0 transition-all duration-300 z-50">
+            <span id="undo-message" class="text-sm"></span>
+            <button id="undo-btn" class="ml-4 px-4 py-1.5 bg-white text-gray-800 rounded font-medium text-sm hover:bg-gray-100 transition">
+                <span data-i18n="undo">Fortryd</span>
+            </button>
+        </div>
     `;
 
     i18n.updateDOM();
     setupListPageEvents(list);
+    loadArchives(list);
 }
 
 // Category order for sorting
@@ -661,6 +713,54 @@ function setupListPageEvents(list) {
     // Toggle and delete buttons (event delegation)
     document.getElementById('items-list').addEventListener('click', handleItemAction);
     document.getElementById('bought-list').addEventListener('click', handleItemAction);
+
+    // List actions dropdown
+    const listActionsBtn = document.getElementById('list-actions-btn');
+    const listActionsDropdown = document.getElementById('list-actions-dropdown');
+
+    listActionsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        listActionsDropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#list-actions-btn') && !e.target.closest('#list-actions-dropdown')) {
+            listActionsDropdown.classList.add('hidden');
+        }
+    });
+
+    // Archive bought items
+    document.getElementById('archive-bought-btn').addEventListener('click', async () => {
+        listActionsDropdown.classList.add('hidden');
+        await handleArchiveBought(list);
+    });
+
+    // Delete bought items
+    document.getElementById('delete-bought-btn').addEventListener('click', async () => {
+        listActionsDropdown.classList.add('hidden');
+        await handleDeleteBought(list);
+    });
+
+    // Delete all items
+    document.getElementById('delete-all-btn').addEventListener('click', async () => {
+        listActionsDropdown.classList.add('hidden');
+        if (confirm(i18n.t('confirmDeleteAll') || 'Er du sikker på at du vil slette alle varer?')) {
+            await handleDeleteAll(list);
+        }
+    });
+
+    // Toggle archives section
+    document.getElementById('toggle-archives').addEventListener('click', () => {
+        const archivesList = document.getElementById('archives-list');
+        const arrow = document.getElementById('archives-arrow');
+        archivesList.classList.toggle('hidden');
+        arrow.classList.toggle('rotate-180');
+    });
+
+    // Undo button
+    document.getElementById('undo-btn').addEventListener('click', async () => {
+        await handleUndo(list);
+    });
 
     // Initialize follow/notification toggles immediately
     initializeFollowToggles(list);
@@ -1188,6 +1288,275 @@ async function unsubscribeFromNotifications(listId) {
     } catch (error) {
         console.error('Failed to unsubscribe from push notifications:', error);
         return false;
+    }
+}
+
+// ===== Archive Functions =====
+
+async function loadArchives(list) {
+    try {
+        const token = store.getAccessToken(currentListName);
+        const response = await api.getArchives(list.id, token);
+        const archives = response.archives || [];
+
+        // Update count
+        const countEl = document.getElementById('archives-count');
+        if (countEl) {
+            countEl.textContent = `(${archives.length})`;
+        }
+
+        // Render archives
+        renderArchives(archives, list);
+    } catch (error) {
+        console.error('Error loading archives:', error);
+        const archivesList = document.getElementById('archives-list');
+        if (archivesList) {
+            archivesList.innerHTML = `<p class="text-red-400 text-center py-4 text-sm">${i18n.t('archiveLoadError') || 'Kunne ikke indlæse arkiv'}</p>`;
+        }
+    }
+}
+
+function renderArchives(archives, list) {
+    const archivesList = document.getElementById('archives-list');
+    if (!archivesList) return;
+
+    if (archives.length === 0) {
+        archivesList.innerHTML = `<p class="text-gray-400 text-center py-4 text-sm" data-i18n="noArchives">${i18n.t('noArchives') || 'Ingen arkiverede indkøb'}</p>`;
+        return;
+    }
+
+    archivesList.innerHTML = archives.map(archive => {
+        const date = new Date(archive.archived_at);
+        const formattedDate = date.toLocaleDateString(i18n.currentLang === 'da' ? 'da-DK' : 'en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const items = archive.items || [];
+
+        return `
+            <div class="bg-white rounded-lg shadow-sm p-3" data-archive-id="${archive.id}">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">${formattedDate}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">${items.length} ${i18n.t('items') || 'varer'}</span>
+                        <button class="delete-archive-btn p-1 text-gray-400 hover:text-red-500 transition" data-archive-id="${archive.id}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 space-y-0.5">
+                    ${items.slice(0, 5).map(item => `<div class="truncate">• ${escapeHtml(item.name)}${item.amount ? ` (${escapeHtml(item.amount)})` : ''}</div>`).join('')}
+                    ${items.length > 5 ? `<div class="text-gray-400">+${items.length - 5} ${i18n.t('more') || 'mere'}...</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Add delete archive event listeners
+    archivesList.querySelectorAll('.delete-archive-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const archiveId = btn.dataset.archiveId;
+            await handleDeleteArchive(archiveId, list);
+        });
+    });
+}
+
+async function handleArchiveBought(list) {
+    // Check edit permission
+    if (list.edit_requires_password && sync.isOnline()) {
+        const token = store.getAccessToken(currentListName);
+        if (!token) {
+            const verified = await showPasswordModal(list.id, 'edit');
+            if (!verified) return;
+        }
+    }
+
+    try {
+        const token = store.getAccessToken(currentListName);
+        const response = await api.archiveBoughtItems(list.id, token);
+
+        if (response.success) {
+            // Store undo data
+            currentUndoData = response.undo_data;
+
+            // Remove bought items from store
+            const state = store.getState();
+            const boughtItems = state.items.filter(item => item.is_bought);
+            boughtItems.forEach(item => store.removeItem(item.id));
+
+            // Re-render UI
+            renderListUI(list);
+
+            // Show undo toast
+            showUndoToast(i18n.t('archivedBought') || 'Købte varer arkiveret', list);
+        }
+    } catch (error) {
+        console.error('Error archiving bought items:', error);
+        alert(error.message || i18n.t('error'));
+    }
+}
+
+async function handleDeleteBought(list) {
+    // Check edit permission
+    if (list.edit_requires_password && sync.isOnline()) {
+        const token = store.getAccessToken(currentListName);
+        if (!token) {
+            const verified = await showPasswordModal(list.id, 'edit');
+            if (!verified) return;
+        }
+    }
+
+    try {
+        const token = store.getAccessToken(currentListName);
+        const response = await api.deleteBoughtItems(list.id, token);
+
+        if (response.success) {
+            // Store undo data
+            currentUndoData = response.undo_data;
+
+            // Remove bought items from store
+            const state = store.getState();
+            const boughtItems = state.items.filter(item => item.is_bought);
+            boughtItems.forEach(item => store.removeItem(item.id));
+
+            // Re-render UI
+            renderListUI(list);
+
+            // Show undo toast
+            showUndoToast(i18n.t('deletedBought') || 'Købte varer slettet', list);
+        }
+    } catch (error) {
+        console.error('Error deleting bought items:', error);
+        alert(error.message || i18n.t('error'));
+    }
+}
+
+async function handleDeleteAll(list) {
+    // Check edit permission
+    if (list.edit_requires_password && sync.isOnline()) {
+        const token = store.getAccessToken(currentListName);
+        if (!token) {
+            const verified = await showPasswordModal(list.id, 'edit');
+            if (!verified) return;
+        }
+    }
+
+    try {
+        const token = store.getAccessToken(currentListName);
+        const response = await api.deleteAllItems(list.id, token);
+
+        if (response.success) {
+            // Store undo data
+            currentUndoData = response.undo_data;
+
+            // Clear all items from store
+            store.setItems([]);
+
+            // Re-render UI
+            renderListUI(list);
+
+            // Show undo toast
+            showUndoToast(i18n.t('deletedAll') || 'Alle varer slettet', list);
+        }
+    } catch (error) {
+        console.error('Error deleting all items:', error);
+        alert(error.message || i18n.t('error'));
+    }
+}
+
+async function handleDeleteArchive(archiveId, list) {
+    // Check edit permission
+    if (list.edit_requires_password && sync.isOnline()) {
+        const token = store.getAccessToken(currentListName);
+        if (!token) {
+            const verified = await showPasswordModal(list.id, 'edit');
+            if (!verified) return;
+        }
+    }
+
+    try {
+        const token = store.getAccessToken(currentListName);
+        const response = await api.deleteArchive(archiveId, list.id, token);
+
+        if (response.success) {
+            // Store undo data
+            currentUndoData = response.undo_data;
+
+            // Reload archives
+            await loadArchives(list);
+
+            // Show undo toast
+            showUndoToast(i18n.t('archiveDeleted') || 'Arkiv slettet', list);
+        }
+    } catch (error) {
+        console.error('Error deleting archive:', error);
+        alert(error.message || i18n.t('error'));
+    }
+}
+
+async function handleUndo(list) {
+    if (!currentUndoData) return;
+
+    // Hide toast immediately
+    hideUndoToast();
+
+    try {
+        const token = store.getAccessToken(currentListName);
+        const response = await api.undoArchiveAction(list.id, currentUndoData, token);
+
+        if (response.success) {
+            // Reload items from server
+            const items = await sync.syncListItems(list.id, token);
+            store.setItems(items);
+
+            // Re-render UI
+            renderListUI(list);
+        }
+
+        currentUndoData = null;
+    } catch (error) {
+        console.error('Error undoing action:', error);
+        alert(error.message || i18n.t('error'));
+    }
+}
+
+function showUndoToast(message, list) {
+    const toast = document.getElementById('undo-toast');
+    const messageEl = document.getElementById('undo-message');
+
+    if (!toast || !messageEl) return;
+
+    // Clear any existing timeout
+    if (undoTimeout) {
+        clearTimeout(undoTimeout);
+    }
+
+    // Set message and show toast
+    messageEl.textContent = message;
+    toast.classList.remove('translate-y-full', 'opacity-0');
+
+    // Auto-hide after 5 seconds
+    undoTimeout = setTimeout(() => {
+        hideUndoToast();
+        currentUndoData = null;
+    }, 5000);
+}
+
+function hideUndoToast() {
+    const toast = document.getElementById('undo-toast');
+    if (!toast) return;
+
+    toast.classList.add('translate-y-full', 'opacity-0');
+
+    if (undoTimeout) {
+        clearTimeout(undoTimeout);
+        undoTimeout = null;
     }
 }
 

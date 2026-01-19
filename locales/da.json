@@ -90,5 +90,22 @@
   "followListDesc": "Gør listen tilgængelig offline",
   "enableNotifications": "Notifikationer",
   "enableNotificationsDesc": "Få besked når listen ændres",
-  "savePassword": "Husk adgangskode"
+  "savePassword": "Husk adgangskode",
+  "archiveBought": "Arkivér købte varer",
+  "deleteBought": "Slet købte varer",
+  "deleteAll": "Slet alle varer",
+  "confirmDeleteAll": "Er du sikker på at du vil slette alle varer?",
+  "archives": "Arkiv",
+  "noArchives": "Ingen arkiverede indkøb",
+  "loadingArchives": "Indlæser arkiv...",
+  "archiveLoadError": "Kunne ikke indlæse arkiv",
+  "items": "varer",
+  "more": "mere",
+  "undo": "Fortryd",
+  "archivedBought": "Købte varer arkiveret",
+  "deletedBought": "Købte varer slettet",
+  "deletedAll": "Alle varer slettet",
+  "archiveDeleted": "Arkiv slettet",
+  "iosInstallInstructions": "Tryk på del-knappen og vælg \"Føj til hjemmeskærm\"",
+  "gotIt": "Forstået"
 }

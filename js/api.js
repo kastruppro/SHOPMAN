@@ -175,6 +175,57 @@ const api = {
             action: 'unsubscribe',
             list_id: listId
         });
+    },
+
+    // Archive operations
+    async archiveBoughtItems(listId, token = null) {
+        return this.callFunction('manage-archives', {
+            action: 'archive_bought',
+            list_id: listId,
+            token
+        });
+    },
+
+    async deleteBoughtItems(listId, token = null) {
+        return this.callFunction('manage-archives', {
+            action: 'delete_bought',
+            list_id: listId,
+            token
+        });
+    },
+
+    async deleteAllItems(listId, token = null) {
+        return this.callFunction('manage-archives', {
+            action: 'delete_all',
+            list_id: listId,
+            token
+        });
+    },
+
+    async getArchives(listId, token = null) {
+        return this.callFunction('manage-archives', {
+            action: 'get_archives',
+            list_id: listId,
+            token
+        });
+    },
+
+    async deleteArchive(archiveId, listId, token = null) {
+        return this.callFunction('manage-archives', {
+            action: 'delete_archive',
+            archive_id: archiveId,
+            list_id: listId,
+            token
+        });
+    },
+
+    async undoArchiveAction(listId, undoData, token = null) {
+        return this.callFunction('manage-archives', {
+            action: 'undo',
+            list_id: listId,
+            undo_data: undoData,
+            token
+        });
     }
 };
 
