@@ -3,6 +3,7 @@ import i18n from './i18n.js';
 import router from './router.js';
 import store from './store.js';
 import sync from './sync.js';
+import pwaInstall from './pwa-install.js';
 import { renderHomepage } from './components/homepage.js';
 import { renderListPage } from './components/listpage.js';
 
@@ -61,6 +62,9 @@ async function initApp() {
 
     // Register service worker
     registerServiceWorker();
+
+    // Initialize PWA install banner
+    pwaInstall.init();
 }
 
 // Start the app when DOM is ready

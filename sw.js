@@ -1,5 +1,5 @@
 // SHOPMAN Service Worker - Offline First PWA
-const CACHE_VERSION = 'v1.1.0';
+const CACHE_VERSION = 'v0.4.2';
 const STATIC_CACHE = `shopman-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `shopman-dynamic-${CACHE_VERSION}`;
 
@@ -19,10 +19,16 @@ const STATIC_ASSETS = [
   '/js/components/homepage.js',
   '/js/components/listpage.js',
   '/js/components/passwordmodal.js',
+  '/js/pwa-install.js',
   '/locales/da.json',
   '/locales/en.json',
-  '/icons/icon.svg',
-  '/icons/icon-maskable.svg',
+  '/icons/icon-72.png',
+  '/icons/icon-120.png',
+  '/icons/icon-152.png',
+  '/icons/icon-167.png',
+  '/icons/icon-180.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
   '/manifest.json'
 ];
 
