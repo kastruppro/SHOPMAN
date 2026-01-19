@@ -207,19 +207,33 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Push notification support (for future use)
+// Push notification support
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
-  const data = event.data.json();
+  let data;
+  try {
+    data = event.data.json();
+  } catch (e) {
+    console.error('[SW] Failed to parse push data:', e);
+    return;
+  }
+
+  // Handle nested data structure from our API
+  const notificationData = data.data || data;
+  const url = notificationData.url || (notificationData.listName ? `/#list/${encodeURIComponent(notificationData.listName)}` : '/');
 
   const options = {
     body: data.body || 'Ny opdatering til din indkøbsliste',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-72.png',
+    icon: '/icons/icon.svg',
+    badge: '/icons/icon.svg',
     vibrate: [100, 50, 100],
+    tag: notificationData.listId || 'shopman-notification',
+    renotify: true,
     data: {
-      url: data.url || '/'
+      url: url,
+      listId: notificationData.listId,
+      listName: notificationData.listName
     },
     actions: [
       { action: 'open', title: 'Åbn' },
@@ -238,19 +252,24 @@ self.addEventListener('notificationclick', (event) => {
 
   if (event.action === 'close') return;
 
-  const url = event.notification.data?.url || '/';
+  const notificationData = event.notification.data || {};
+  const targetUrl = notificationData.url || '/';
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clients) => {
-      // Focus existing window if available
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Try to find an existing window with the app open
       for (const client of clients) {
-        if (client.url === url && 'focus' in client) {
+        const clientUrl = new URL(client.url);
+        // If we find the app, navigate to the specific list
+        if (clientUrl.origin === self.location.origin) {
+          // Navigate to the list URL
+          client.navigate(targetUrl);
           return client.focus();
         }
       }
-      // Open new window
+      // No existing window, open a new one
       if (self.clients.openWindow) {
-        return self.clients.openWindow(url);
+        return self.clients.openWindow(targetUrl);
       }
     })
   );

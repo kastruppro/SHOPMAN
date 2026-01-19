@@ -159,6 +159,22 @@ const api = {
             return lists[0].view_requires_password || lists[0].edit_requires_password;
         }
         return false;
+    },
+
+    // Push notification subscriptions
+    async savePushSubscription(listId, subscription) {
+        return this.callFunction('push-subscriptions', {
+            action: 'subscribe',
+            list_id: listId,
+            subscription
+        });
+    },
+
+    async deletePushSubscription(listId) {
+        return this.callFunction('push-subscriptions', {
+            action: 'unsubscribe',
+            list_id: listId
+        });
     }
 };
 

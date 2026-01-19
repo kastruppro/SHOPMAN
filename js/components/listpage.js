@@ -708,18 +708,20 @@ function setupListPageEvents(list) {
     // Notifications toggle
     document.getElementById('notifications-toggle').addEventListener('change', async (e) => {
         const enabled = e.target.checked;
-        await db.setListNotifications(list.id, enabled);
 
         if (enabled) {
-            // Request notification permission
-            if ('Notification' in window && Notification.permission === 'default') {
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    e.target.checked = false;
-                    await db.setListNotifications(list.id, false);
-                }
+            // Request notification permission and subscribe to push
+            const subscribed = await subscribeToNotifications(list);
+            if (!subscribed) {
+                e.target.checked = false;
+                return;
             }
+        } else {
+            // Unsubscribe from push notifications
+            await unsubscribeFromNotifications(list.id);
         }
+
+        await db.setListNotifications(list.id, enabled);
     });
 
     // Password form
@@ -1102,6 +1104,104 @@ async function handleDeleteList(list) {
         router.goHome();
     } catch (error) {
         alert(error.message || i18n.t('error'));
+    }
+}
+
+// ===== Push Notification Functions =====
+
+// VAPID public key for push notifications
+const VAPID_PUBLIC_KEY = 'BFpPUI-xx-aBDBj6OynTvPPOnSu9iaJqKXe5TePnxUW9Hphr7ztPVakRSIcMJjJtkWrMwrPnTrjIAfyLPDYclh8';
+
+// Convert VAPID key to Uint8Array for subscription
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Subscribe to push notifications for a list
+async function subscribeToNotifications(list) {
+    try {
+        // Check if push is supported
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.warn('Push notifications not supported');
+            alert(i18n.t('pushNotSupported') || 'Push notifications are not supported in this browser');
+            return false;
+        }
+
+        // Check if VAPID key is configured
+        if (VAPID_PUBLIC_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+            console.error('VAPID public key not configured');
+            alert('Push notifications are not configured yet');
+            return false;
+        }
+
+        // Request permission
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            console.warn('Notification permission denied');
+            return false;
+        }
+
+        // Get service worker registration
+        const registration = await navigator.serviceWorker.ready;
+
+        // Check for existing subscription
+        let subscription = await registration.pushManager.getSubscription();
+
+        // If no subscription, create one
+        if (!subscription) {
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+        }
+
+        // Send subscription to server
+        const subscriptionJSON = subscription.toJSON();
+        await api.savePushSubscription(list.id, {
+            endpoint: subscriptionJSON.endpoint,
+            keys: {
+                p256dh: subscriptionJSON.keys.p256dh,
+                auth: subscriptionJSON.keys.auth
+            }
+        });
+
+        // Save subscription locally
+        await db.savePushSubscription(list.id, subscriptionJSON);
+
+        console.log('Successfully subscribed to push notifications for list:', list.name);
+        return true;
+    } catch (error) {
+        console.error('Failed to subscribe to push notifications:', error);
+        alert(i18n.t('pushSubscriptionFailed') || 'Failed to enable notifications');
+        return false;
+    }
+}
+
+// Unsubscribe from push notifications for a list
+async function unsubscribeFromNotifications(listId) {
+    try {
+        // Remove subscription from server
+        await api.deletePushSubscription(listId);
+
+        // Clear local subscription
+        await db.savePushSubscription(listId, null);
+
+        console.log('Unsubscribed from push notifications for list:', listId);
+        return true;
+    } catch (error) {
+        console.error('Failed to unsubscribe from push notifications:', error);
+        return false;
     }
 }
 
