@@ -261,6 +261,109 @@ const db = {
   // Check if ID is temporary
   isTempId(id) {
     return id && id.toString().startsWith('temp_');
+  },
+
+  // ===== Following lists =====
+
+  // Follow a list (enables offline access)
+  async followList(listId, options = {}) {
+    const list = await this.getList(listId);
+    if (list) {
+      list.isFollowed = true;
+      list.notificationsEnabled = options.notifications || false;
+      list.followedAt = Date.now();
+      await dbPut(STORES.LISTS, list);
+      return list;
+    }
+    return null;
+  },
+
+  // Unfollow a list
+  async unfollowList(listId) {
+    const list = await this.getList(listId);
+    if (list) {
+      list.isFollowed = false;
+      list.notificationsEnabled = false;
+      list.savedPassword = null; // Clear saved password
+      await dbPut(STORES.LISTS, list);
+
+      // Optionally delete cached items
+      await this.deleteItemsByList(listId);
+    }
+  },
+
+  // Get all followed lists
+  async getFollowedLists() {
+    const allLists = await this.getAllLists();
+    return allLists.filter(list => list.isFollowed === true);
+  },
+
+  // Check if a list is followed
+  async isListFollowed(listId) {
+    const list = await this.getList(listId);
+    return list?.isFollowed === true;
+  },
+
+  // Toggle notifications for a list
+  async setListNotifications(listId, enabled) {
+    const list = await this.getList(listId);
+    if (list) {
+      list.notificationsEnabled = enabled;
+      await dbPut(STORES.LISTS, list);
+      return list;
+    }
+    return null;
+  },
+
+  // ===== Password management =====
+
+  // Save password for a list (encrypted in real app, here just base64 for demo)
+  async savePassword(listId, password) {
+    const list = await this.getList(listId);
+    if (list) {
+      // Note: In production, use proper encryption
+      list.savedPassword = btoa(password);
+      await dbPut(STORES.LISTS, list);
+    }
+  },
+
+  // Get saved password for a list
+  async getSavedPassword(listId) {
+    const list = await this.getList(listId);
+    if (list?.savedPassword) {
+      try {
+        return atob(list.savedPassword);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  },
+
+  // Clear saved password for a list
+  async clearSavedPassword(listId) {
+    const list = await this.getList(listId);
+    if (list) {
+      list.savedPassword = null;
+      await dbPut(STORES.LISTS, list);
+    }
+  },
+
+  // ===== Push subscription =====
+
+  // Save push subscription for a list
+  async savePushSubscription(listId, subscription) {
+    const list = await this.getList(listId);
+    if (list) {
+      list.pushSubscription = subscription;
+      await dbPut(STORES.LISTS, list);
+    }
+  },
+
+  // Get push subscription for a list
+  async getPushSubscription(listId) {
+    const list = await this.getList(listId);
+    return list?.pushSubscription || null;
   }
 };
 

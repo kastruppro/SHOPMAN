@@ -44,6 +44,10 @@
                 placeholder="Password"
             >
             <p id="password-error" class="text-red-500 text-sm mt-2 hidden" data-i18n="incorrectPassword">Incorrect password</p>
+            <label class="flex items-center gap-2 mt-3 cursor-pointer">
+                <input type="checkbox" id="save-password-checkbox" class="w-4 h-4 text-green-500 rounded focus:ring-green-500">
+                <span class="text-sm text-gray-600" data-i18n="savePassword">Husk adgangskode</span>
+            </label>
             <div class="flex gap-3 mt-4">
                 <button
                     id="modal-cancel"

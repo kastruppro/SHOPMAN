@@ -80,5 +80,12 @@
   "syncComplete": "Sync complete",
   "syncError": "Sync error - will retry later",
   "installApp": "Install app",
-  "addToHomeScreen": "Add to home screen for a better experience"
+  "addToHomeScreen": "Add to home screen for a better experience",
+  "myLists": "My Lists",
+  "followList": "Follow List",
+  "followListLabel": "Follow this list",
+  "followListDesc": "Make the list available offline",
+  "enableNotifications": "Notifications",
+  "enableNotificationsDesc": "Get notified when the list changes",
+  "savePassword": "Remember password"
 }

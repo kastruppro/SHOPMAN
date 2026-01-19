@@ -323,6 +323,46 @@ function renderListUI(list) {
             </button>
 
             <div id="settings-panel" class="hidden mt-4 space-y-4">
+                <!-- Follow List Settings -->
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                        </svg>
+                        <span data-i18n="followList">Følg liste</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">⭐</span>
+                                <div>
+                                    <p class="font-medium text-gray-700" data-i18n="followListLabel">Følg denne liste</p>
+                                    <p class="text-xs text-gray-500" data-i18n="followListDesc">Gør listen tilgængelig offline</p>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <input type="checkbox" id="follow-toggle" class="sr-only peer" data-list-id="${list.id}">
+                                <div class="w-11 h-6 bg-gray-300 peer-checked:bg-green-500 rounded-full transition"></div>
+                                <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                            </div>
+                        </label>
+                        <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition" id="notifications-label">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">🔔</span>
+                                <div>
+                                    <p class="font-medium text-gray-700" data-i18n="enableNotifications">Notifikationer</p>
+                                    <p class="text-xs text-gray-500" data-i18n="enableNotificationsDesc">Få besked når listen ændres</p>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <input type="checkbox" id="notifications-toggle" class="sr-only peer" data-list-id="${list.id}">
+                                <div class="w-11 h-6 bg-gray-300 peer-checked:bg-green-500 rounded-full transition"></div>
+                                <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Password Settings -->
                 <div class="bg-white rounded-xl shadow-lg p-4">
                     <h3 class="font-medium text-gray-800 mb-3" data-i18n="${list.has_password ? 'changePassword' : 'addPassword'}">${list.has_password ? 'Change Password' : 'Add Password'}</h3>
@@ -412,6 +452,26 @@ function renderListUI(list) {
 // Category order for sorting
 const CATEGORY_ORDER = ['produce', 'dairy', 'meat', 'bakery', 'frozen', 'pantry', 'beverages', 'snacks', 'household', 'personal', 'other', null];
 
+// Category emoji mapping
+const CATEGORY_EMOJI = {
+    produce: '🥬',
+    dairy: '🧀',
+    meat: '🥩',
+    bakery: '🥖',
+    frozen: '🧊',
+    pantry: '🥫',
+    beverages: '🥤',
+    snacks: '🍿',
+    household: '🧹',
+    personal: '🧴',
+    other: '📦',
+    null: '📝'
+};
+
+function getCategoryEmoji(category) {
+    return CATEGORY_EMOJI[category] || CATEGORY_EMOJI[null];
+}
+
 function groupItemsByCategory(items) {
     const groups = {};
 
@@ -443,10 +503,12 @@ function renderItemsByCategory(items, isBought) {
         const categoryLabel = group.category
             ? i18n.t(`types.${group.category}`)
             : i18n.t('uncategorized');
+        const categoryEmoji = getCategoryEmoji(group.category);
 
         return `
             <div class="category-group">
                 <div class="flex items-center gap-2 mb-2">
+                    <span class="text-sm">${categoryEmoji}</span>
                     <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">${categoryLabel}</span>
                     <div class="flex-1 h-px bg-gray-200"></div>
                 </div>
@@ -613,11 +675,51 @@ function setupListPageEvents(list) {
     document.getElementById('bought-list').addEventListener('click', handleItemAction);
 
     // Toggle settings
-    document.getElementById('toggle-settings').addEventListener('click', () => {
+    document.getElementById('toggle-settings').addEventListener('click', async () => {
         const panel = document.getElementById('settings-panel');
         const arrow = document.getElementById('settings-arrow');
         panel.classList.toggle('hidden');
         arrow.classList.toggle('rotate-180');
+
+        // Initialize follow/notification toggles when settings panel opens
+        if (!panel.classList.contains('hidden')) {
+            await initializeFollowToggles(list);
+        }
+    });
+
+    // Follow toggle
+    document.getElementById('follow-toggle').addEventListener('change', async (e) => {
+        const isFollowed = e.target.checked;
+        const notificationsToggle = document.getElementById('notifications-toggle');
+        const notificationsLabel = document.getElementById('notifications-label');
+
+        if (isFollowed) {
+            await db.followList(list.id);
+            notificationsLabel.style.opacity = '1';
+            notificationsLabel.style.pointerEvents = 'auto';
+        } else {
+            await db.unfollowList(list.id);
+            notificationsToggle.checked = false;
+            notificationsLabel.style.opacity = '0.5';
+            notificationsLabel.style.pointerEvents = 'none';
+        }
+    });
+
+    // Notifications toggle
+    document.getElementById('notifications-toggle').addEventListener('change', async (e) => {
+        const enabled = e.target.checked;
+        await db.setListNotifications(list.id, enabled);
+
+        if (enabled) {
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    e.target.checked = false;
+                    await db.setListNotifications(list.id, false);
+                }
+            }
+        }
     });
 
     // Password form
@@ -639,6 +741,30 @@ function setupListPageEvents(list) {
         e.preventDefault();
         await handleDeleteList(list);
     });
+}
+
+async function initializeFollowToggles(list) {
+    const followToggle = document.getElementById('follow-toggle');
+    const notificationsToggle = document.getElementById('notifications-toggle');
+    const notificationsLabel = document.getElementById('notifications-label');
+
+    // Get current follow status from IndexedDB
+    const localList = await db.getList(list.id);
+    const isFollowed = localList?.isFollowed === true;
+    const notificationsEnabled = localList?.notificationsEnabled === true;
+
+    // Set checkbox states
+    followToggle.checked = isFollowed;
+    notificationsToggle.checked = notificationsEnabled;
+
+    // Disable notifications if not followed
+    if (!isFollowed) {
+        notificationsLabel.style.opacity = '0.5';
+        notificationsLabel.style.pointerEvents = 'none';
+    } else {
+        notificationsLabel.style.opacity = '1';
+        notificationsLabel.style.pointerEvents = 'auto';
+    }
 }
 
 async function handleAddItem(list) {
