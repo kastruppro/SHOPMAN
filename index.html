@@ -1,11 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="da">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping List</title>
-    <meta name="description" content="Simple shopping list app with password protection and bilingual support">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SHOPMAN - Indkøbsliste</title>
+    <meta name="description" content="Simpel indkøbsliste app med offline support og password-beskyttelse">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#22c55e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SHOPMAN">
+    <meta name="application-name" content="SHOPMAN">
+    <meta name="msapplication-TileColor" content="#22c55e">
+    <meta name="msapplication-tap-highlight" content="no">
+
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+    <!-- Styles -->
     <link href="css/styles.css" rel="stylesheet">
 </head>
 <body class="min-h-screen bg-gradient-to-b from-green-50 to-white">
@@ -43,7 +61,7 @@
 
     <!-- Footer -->
     <footer class="fixed bottom-0 left-0 right-0 py-2 text-center text-xs text-gray-400 bg-gradient-to-t from-white to-transparent">
-        <span>v0.2.0</span> · <span>kastruppro</span>
+        <span>v0.3.0</span> · <span>kastruppro</span>
     </footer>
 
     <script type="module" src="js/app.js"></script>

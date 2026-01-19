@@ -71,5 +71,14 @@
   "listDeleted": "Liste slettet",
   "uncategorized": "Uden kategori",
   "editItem": "Rediger vare",
-  "saveChanges": "Gem"
+  "saveChanges": "Gem",
+  "offline": "Du er offline - ændringer gemmes lokalt",
+  "syncing": "Synkroniserer...",
+  "pendingChanges": "afventende ændringer",
+  "listNotFoundOffline": "Listen findes ikke i din lokale cache. Forbind til internettet for at hente den.",
+  "savedLocally": "Gemt lokalt",
+  "syncComplete": "Synkronisering fuldført",
+  "syncError": "Synkroniseringsfejl - vil prøve igen senere",
+  "installApp": "Installer app",
+  "addToHomeScreen": "Tilføj til startskærm for bedre oplevelse"
 }
