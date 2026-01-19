@@ -52,5 +52,21 @@
   "loadingList": "Loading list...",
   "error": "Error",
   "tryAgain": "Try again",
-  "connectionError": "Connection error. Please check your internet."
+  "connectionError": "Connection error. Please check your internet.",
+  "settings": "Settings",
+  "listSettings": "List Settings",
+  "changePassword": "Change Password",
+  "removePassword": "Remove Password",
+  "addPassword": "Add Password",
+  "currentPassword": "Current password",
+  "newPassword": "New password",
+  "confirmDelete": "Delete List",
+  "deleteWarning": "Are you sure? This will permanently delete the list and all items.",
+  "deleteList": "Delete List",
+  "save": "Save",
+  "noPassword": "This list has no password",
+  "hasPassword": "This list is password protected",
+  "passwordUpdated": "Password updated",
+  "passwordRemoved": "Password removed",
+  "listDeleted": "List deleted"
 }

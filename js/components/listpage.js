@@ -190,7 +190,7 @@ function renderListUI(list) {
         </div>
 
         <!-- Bought Items -->
-        <div>
+        <div class="mb-6">
             <h2 class="text-lg font-semibold text-gray-500 mb-3 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -204,6 +204,101 @@ function renderListUI(list) {
                     ? `<p class="text-gray-400 text-center py-4 bg-gray-50 rounded-lg" data-i18n="noBoughtItems">No bought items</p>`
                     : boughtItems.map(item => renderItem(item, true)).join('')
                 }
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div class="border-t pt-6">
+            <button type="button" id="toggle-settings" class="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span data-i18n="settings">Settings</span>
+                <svg class="w-4 h-4 transition-transform" id="settings-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+
+            <div id="settings-panel" class="hidden mt-4 space-y-4">
+                <!-- Password Settings -->
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3" data-i18n="${list.has_password ? 'changePassword' : 'addPassword'}">${list.has_password ? 'Change Password' : 'Add Password'}</h3>
+
+                    <form id="password-form" class="space-y-3">
+                        ${list.has_password ? `
+                            <div>
+                                <input
+                                    type="password"
+                                    id="current-password"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                    data-i18n-placeholder="currentPassword"
+                                    placeholder="Current password"
+                                    required
+                                >
+                            </div>
+                        ` : ''}
+                        <div>
+                            <input
+                                type="password"
+                                id="new-password"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                                data-i18n-placeholder="newPassword"
+                                placeholder="New password"
+                            >
+                        </div>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" id="settings-require-view" class="w-4 h-4 text-green-500 rounded focus:ring-green-500" ${list.view_requires_password ? 'checked' : ''}>
+                                <span class="text-sm text-gray-600" data-i18n="requirePasswordToView">Require password to view</span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" id="settings-require-edit" class="w-4 h-4 text-green-500 rounded focus:ring-green-500" ${list.edit_requires_password ? 'checked' : ''} checked>
+                                <span class="text-sm text-gray-600" data-i18n="requirePasswordToEdit">Require password to edit</span>
+                            </label>
+                        </div>
+                        <div class="flex gap-2">
+                            <button
+                                type="submit"
+                                class="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm"
+                                data-i18n="save"
+                            >Save</button>
+                            ${list.has_password ? `
+                                <button
+                                    type="button"
+                                    id="remove-password-btn"
+                                    class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition text-sm"
+                                    data-i18n="removePassword"
+                                >Remove Password</button>
+                            ` : ''}
+                        </div>
+                        <p id="password-message" class="text-sm hidden"></p>
+                    </form>
+                </div>
+
+                <!-- Delete List -->
+                <div class="bg-white rounded-xl shadow-lg p-4 border border-red-200">
+                    <h3 class="font-medium text-red-600 mb-2" data-i18n="deleteList">Delete List</h3>
+                    <p class="text-sm text-gray-500 mb-3" data-i18n="deleteWarning">Are you sure? This will permanently delete the list and all items.</p>
+
+                    <form id="delete-form" class="space-y-3">
+                        ${list.has_password ? `
+                            <input
+                                type="password"
+                                id="delete-password"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition text-sm"
+                                data-i18n-placeholder="password"
+                                placeholder="Password"
+                                required
+                            >
+                        ` : ''}
+                        <button
+                            type="submit"
+                            class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm"
+                            data-i18n="deleteList"
+                        >Delete List</button>
+                    </form>
+                </div>
             </div>
         </div>
     `;
@@ -295,6 +390,34 @@ function setupListPageEvents(list) {
     // Toggle and delete buttons (event delegation)
     document.getElementById('items-list').addEventListener('click', handleItemAction);
     document.getElementById('bought-list').addEventListener('click', handleItemAction);
+
+    // Toggle settings
+    document.getElementById('toggle-settings').addEventListener('click', () => {
+        const panel = document.getElementById('settings-panel');
+        const arrow = document.getElementById('settings-arrow');
+        panel.classList.toggle('hidden');
+        arrow.classList.toggle('rotate-180');
+    });
+
+    // Password form
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handlePasswordUpdate(list);
+    });
+
+    // Remove password button
+    const removeBtn = document.getElementById('remove-password-btn');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', async () => {
+            await handleRemovePassword(list);
+        });
+    }
+
+    // Delete form
+    document.getElementById('delete-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleDeleteList(list);
+    });
 }
 
 async function handleAddItem(list) {
@@ -382,6 +505,101 @@ async function handleItemAction(e) {
         } catch (error) {
             console.error('Error deleting item:', error);
         }
+    }
+}
+
+async function handlePasswordUpdate(list) {
+    const currentPasswordInput = document.getElementById('current-password');
+    const newPasswordInput = document.getElementById('new-password');
+    const viewCheckbox = document.getElementById('settings-require-view');
+    const editCheckbox = document.getElementById('settings-require-edit');
+    const messageEl = document.getElementById('password-message');
+
+    const currentPassword = currentPasswordInput?.value || null;
+    const newPassword = newPasswordInput.value;
+
+    if (!newPassword) {
+        messageEl.textContent = i18n.t('newPassword') + ' required';
+        messageEl.className = 'text-sm text-red-500';
+        messageEl.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        await api.updatePassword(
+            list.id,
+            currentPassword,
+            newPassword,
+            viewCheckbox.checked,
+            editCheckbox.checked
+        );
+
+        messageEl.textContent = i18n.t('passwordUpdated');
+        messageEl.className = 'text-sm text-green-500';
+        messageEl.classList.remove('hidden');
+
+        // Clear token and reload list
+        store.clearAccessToken(currentListName);
+
+        // Reload page after short delay
+        setTimeout(() => {
+            renderListPage(currentListName);
+        }, 1000);
+    } catch (error) {
+        messageEl.textContent = error.message || i18n.t('error');
+        messageEl.className = 'text-sm text-red-500';
+        messageEl.classList.remove('hidden');
+    }
+}
+
+async function handleRemovePassword(list) {
+    const currentPasswordInput = document.getElementById('current-password');
+    const messageEl = document.getElementById('password-message');
+
+    const currentPassword = currentPasswordInput?.value || null;
+
+    if (list.has_password && !currentPassword) {
+        messageEl.textContent = i18n.t('currentPassword') + ' required';
+        messageEl.className = 'text-sm text-red-500';
+        messageEl.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        await api.updatePassword(list.id, currentPassword, null, false, false);
+
+        messageEl.textContent = i18n.t('passwordRemoved');
+        messageEl.className = 'text-sm text-green-500';
+        messageEl.classList.remove('hidden');
+
+        // Clear token and reload
+        store.clearAccessToken(currentListName);
+
+        setTimeout(() => {
+            renderListPage(currentListName);
+        }, 1000);
+    } catch (error) {
+        messageEl.textContent = error.message || i18n.t('error');
+        messageEl.className = 'text-sm text-red-500';
+        messageEl.classList.remove('hidden');
+    }
+}
+
+async function handleDeleteList(list) {
+    const passwordInput = document.getElementById('delete-password');
+    const password = passwordInput?.value || null;
+
+    if (!confirm(i18n.t('deleteWarning'))) {
+        return;
+    }
+
+    try {
+        await api.deleteList(list.id, password);
+
+        alert(i18n.t('listDeleted'));
+        router.goHome();
+    } catch (error) {
+        alert(error.message || i18n.t('error'));
     }
 }
 

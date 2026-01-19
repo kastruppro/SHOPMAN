@@ -53,11 +53,17 @@ const api = {
     },
 
     async getList(name) {
-        // Direct database query for list metadata (no password hash returned)
+        // Direct database query for list metadata
         const nameLower = name.toLowerCase();
-        return this.request(
-            `/rest/v1/lists?name_lowercase=eq.${encodeURIComponent(nameLower)}&select=id,name,view_requires_password,edit_requires_password,created_at`
+        const lists = await this.request(
+            `/rest/v1/lists?name_lowercase=eq.${encodeURIComponent(nameLower)}&select=id,name,password_hash,view_requires_password,edit_requires_password,created_at`
         );
+        // Add has_password flag (password_hash is not null)
+        return lists.map(list => ({
+            ...list,
+            has_password: list.password_hash !== null,
+            password_hash: undefined // Don't expose the actual hash
+        }));
     },
 
     async verifyPassword(listId, password, action = 'view') {
@@ -120,6 +126,39 @@ const api = {
     async listExists(name) {
         const lists = await this.getList(name);
         return lists && lists.length > 0;
+    },
+
+    // List management
+    async updatePassword(listId, currentPassword, newPassword, viewRequiresPassword, editRequiresPassword) {
+        return this.callFunction('manage-list', {
+            action: 'update_password',
+            list_id: listId,
+            current_password: currentPassword || null,
+            new_password: newPassword,
+            view_requires_password: viewRequiresPassword,
+            edit_requires_password: editRequiresPassword,
+        });
+    },
+
+    async deleteList(listId, password) {
+        return this.callFunction('manage-list', {
+            action: 'delete',
+            list_id: listId,
+            password: password || null,
+        });
+    },
+
+    // Check if list has a password
+    async listHasPassword(listId) {
+        // We check by looking at the password requirements
+        // If either view or edit requires password, then list has password
+        const lists = await this.request(
+            `/rest/v1/lists?id=eq.${listId}&select=view_requires_password,edit_requires_password`
+        );
+        if (lists && lists.length > 0) {
+            return lists[0].view_requires_password || lists[0].edit_requires_password;
+        }
+        return false;
     }
 };
 

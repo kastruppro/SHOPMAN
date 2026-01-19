@@ -52,5 +52,21 @@
   "loadingList": "Indlæser liste...",
   "error": "Fejl",
   "tryAgain": "Prøv igen",
-  "connectionError": "Forbindelsesfejl. Tjek venligst din internetforbindelse."
+  "connectionError": "Forbindelsesfejl. Tjek venligst din internetforbindelse.",
+  "settings": "Indstillinger",
+  "listSettings": "Listeindstillinger",
+  "changePassword": "Skift adgangskode",
+  "removePassword": "Fjern adgangskode",
+  "addPassword": "Tilføj adgangskode",
+  "currentPassword": "Nuværende adgangskode",
+  "newPassword": "Ny adgangskode",
+  "confirmDelete": "Slet liste",
+  "deleteWarning": "Er du sikker? Dette sletter permanent listen og alle varer.",
+  "deleteList": "Slet liste",
+  "save": "Gem",
+  "noPassword": "Denne liste har ingen adgangskode",
+  "hasPassword": "Denne liste er beskyttet med adgangskode",
+  "passwordUpdated": "Adgangskode opdateret",
+  "passwordRemoved": "Adgangskode fjernet",
+  "listDeleted": "Liste slettet"
 }
