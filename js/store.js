@@ -1,4 +1,4 @@
-// Simple state management
+// Simple state management with offline support
 const store = {
     state: {
         currentList: null,
@@ -6,6 +6,10 @@ const store = {
         isLoading: false,
         error: null,
         accessToken: null, // Session token for password-protected lists
+        // Offline/sync state
+        isOnline: navigator.onLine,
+        isSyncing: false,
+        pendingCount: 0,
     },
 
     listeners: new Set(),
@@ -89,6 +93,27 @@ const store = {
             error: null,
             accessToken: null,
         });
+    },
+
+    // Sync state management
+    setSyncState({ isOnline, isSyncing, pendingCount }) {
+        this.setState({
+            isOnline: isOnline !== undefined ? isOnline : this.state.isOnline,
+            isSyncing: isSyncing !== undefined ? isSyncing : this.state.isSyncing,
+            pendingCount: pendingCount !== undefined ? pendingCount : this.state.pendingCount,
+        });
+    },
+
+    setOnline(isOnline) {
+        this.setState({ isOnline });
+    },
+
+    setSyncing(isSyncing) {
+        this.setState({ isSyncing });
+    },
+
+    setPendingCount(count) {
+        this.setState({ pendingCount: count });
     }
 };
 

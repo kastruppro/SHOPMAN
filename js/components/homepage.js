@@ -2,8 +2,11 @@ import i18n from '../i18n.js';
 import router from '../router.js';
 import api from '../api.js';
 import store from '../store.js';
+import db from '../db.js';
 
-export function renderHomepage() {
+export async function renderHomepage() {
+    // Get followed lists from IndexedDB
+    const followedLists = await db.getFollowedLists();
     const app = document.getElementById('app');
 
     app.innerHTML = `
@@ -36,6 +39,37 @@ export function renderHomepage() {
                 </div>
             </div>
         </div>
+
+        ${followedLists.length > 0 ? `
+        <!-- My Lists Section -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                </svg>
+                <span data-i18n="myLists">Mine lister</span>
+            </h2>
+            <div class="space-y-2">
+                ${followedLists.map(list => `
+                    <button
+                        class="followed-list-btn w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-green-50 rounded-lg transition group"
+                        data-list-name="${escapeHtml(list.name)}"
+                    >
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">🛒</span>
+                            <div class="text-left">
+                                <p class="font-medium text-gray-800 group-hover:text-green-700">${escapeHtml(list.name)}</p>
+                                <p class="text-xs text-gray-400">${list.notificationsEnabled ? '🔔' : '🔕'} ${list.has_password ? '🔒' : ''}</p>
+                            </div>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+        ` : ''}
 
         <!-- Create New List Card -->
         <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -131,7 +165,23 @@ export function renderHomepage() {
     setupHomepageEvents();
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function setupHomepageEvents() {
+    // Followed lists click handlers
+    document.querySelectorAll('.followed-list-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const listName = btn.dataset.listName;
+            if (listName) {
+                router.navigateToList(listName);
+            }
+        });
+    });
+
     // Language dropdown
     const dropdownBtn = document.getElementById('lang-dropdown-btn');
     const dropdown = document.getElementById('lang-dropdown');

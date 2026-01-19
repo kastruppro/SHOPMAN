@@ -2,12 +2,13 @@ import i18n from '../i18n.js';
 import api from '../api.js';
 import store from '../store.js';
 import router from '../router.js';
+import db from '../db.js';
 
 let resolvePromise = null;
 let currentListId = null;
 let currentAction = 'view';
 
-export function showPasswordModal(listId, action = 'view') {
+export async function showPasswordModal(listId, action = 'view') {
     currentListId = listId;
     currentAction = action;
 
@@ -15,6 +16,7 @@ export function showPasswordModal(listId, action = 'view') {
     const input = document.getElementById('password-input');
     const errorEl = document.getElementById('password-error');
     const messageEl = document.getElementById('modal-message');
+    const saveCheckbox = document.getElementById('save-password-checkbox');
 
     // Update message based on action
     messageEl.setAttribute('data-i18n', action === 'view' ? 'enterPasswordToAccess' : 'enterPasswordToEdit');
@@ -23,6 +25,25 @@ export function showPasswordModal(listId, action = 'view') {
     // Reset state
     input.value = '';
     errorEl.classList.add('hidden');
+    if (saveCheckbox) saveCheckbox.checked = false;
+
+    // Check for saved password and try to use it automatically
+    const savedPassword = await db.getSavedPassword(listId);
+    if (savedPassword) {
+        // Try to verify with saved password automatically
+        try {
+            const result = await api.verifyPassword(listId, savedPassword, action);
+            if (result.success && result.token) {
+                const listName = router.getListNameFromHash();
+                store.setAccessToken(listName, result.token);
+                return true; // Auto-verified with saved password
+            }
+        } catch (error) {
+            // Saved password didn't work, clear it
+            console.log('[PasswordModal] Saved password invalid, clearing...');
+            await db.clearSavedPassword(listId);
+        }
+    }
 
     // Show modal
     modal.classList.remove('hidden');
@@ -86,6 +107,7 @@ async function handleUnlock() {
     const input = document.getElementById('password-input');
     const errorEl = document.getElementById('password-error');
     const unlockBtn = document.getElementById('modal-unlock');
+    const saveCheckbox = document.getElementById('save-password-checkbox');
 
     const password = input.value;
     if (!password) {
@@ -104,6 +126,12 @@ async function handleUnlock() {
             // Store the token
             const listName = router.getListNameFromHash();
             store.setAccessToken(listName, result.token);
+
+            // Save password if checkbox is checked
+            if (saveCheckbox && saveCheckbox.checked) {
+                await db.savePassword(currentListId, password);
+            }
+
             hideModal(true);
         } else {
             // Show error

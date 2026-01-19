@@ -2,6 +2,8 @@ import i18n from '../i18n.js';
 import router from '../router.js';
 import api from '../api.js';
 import store from '../store.js';
+import sync from '../sync.js';
+import db from '../db.js';
 import { showPasswordModal } from './passwordmodal.js';
 
 let currentListName = null;
@@ -25,15 +27,44 @@ export async function renderListPage(listName) {
     i18n.updateDOM();
 
     try {
-        // Fetch list metadata
-        const lists = await api.getList(listName);
+        let list = null;
+        let items = [];
 
-        if (!lists || lists.length === 0) {
-            showError(i18n.t('listNotFound'));
-            return;
+        // Try to fetch from server, fallback to local cache
+        if (sync.isOnline()) {
+            try {
+                const lists = await api.getList(listName);
+
+                if (!lists || lists.length === 0) {
+                    // Check local cache
+                    list = await sync.getLocalList(listName);
+                    if (!list) {
+                        showError(i18n.t('listNotFound'));
+                        return;
+                    }
+                } else {
+                    list = lists[0];
+                    // Save to local cache
+                    await sync.saveList(list);
+                }
+            } catch (error) {
+                console.error('Error fetching list from server:', error);
+                // Try local cache
+                list = await sync.getLocalList(listName);
+                if (!list) {
+                    showError(i18n.t('connectionError'));
+                    return;
+                }
+            }
+        } else {
+            // Offline - use local cache
+            list = await sync.getLocalList(listName);
+            if (!list) {
+                showError(i18n.t('listNotFoundOffline'));
+                return;
+            }
         }
 
-        const list = lists[0];
         store.setCurrentList(list);
 
         // Check if password is required for viewing
@@ -49,13 +80,18 @@ export async function renderListPage(listName) {
             }
         }
 
-        // Load items
+        // Load items (uses sync module which handles offline/online)
         const token = store.getAccessToken(listName);
-        const items = await api.getItems(list.id, token);
+        items = await sync.syncListItems(list.id, token);
         store.setItems(items);
 
         // Render the list UI
         renderListUI(list);
+
+        // Subscribe to sync state changes to update UI
+        sync.subscribe((syncState) => {
+            updateSyncStatusUI(syncState);
+        });
     } catch (error) {
         console.error('Error loading list:', error);
         showError(error.message || i18n.t('connectionError'));
@@ -83,15 +119,70 @@ function showError(message) {
     i18n.updateDOM();
 }
 
+// Update sync status UI
+function updateSyncStatusUI(syncState) {
+    const statusBar = document.getElementById('sync-status');
+    if (!statusBar) return;
+
+    if (!syncState.isOnline) {
+        statusBar.innerHTML = `
+            <div class="flex items-center gap-2 text-orange-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m-3.536-3.536a4 4 0 010-5.656m-7.072 7.072a4 4 0 010-5.656m-3.536 3.536a9 9 0 010-12.728"></path>
+                </svg>
+                <span data-i18n="offline">${i18n.t('offline')}</span>
+            </div>
+        `;
+        statusBar.className = 'px-3 py-2 bg-orange-50 border-b border-orange-200 text-sm';
+    } else if (syncState.isSyncing) {
+        statusBar.innerHTML = `
+            <div class="flex items-center gap-2 text-blue-600">
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span data-i18n="syncing">${i18n.t('syncing')}</span>
+            </div>
+        `;
+        statusBar.className = 'px-3 py-2 bg-blue-50 border-b border-blue-200 text-sm';
+    } else if (syncState.pendingCount > 0) {
+        statusBar.innerHTML = `
+            <div class="flex items-center gap-2 text-yellow-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>${syncState.pendingCount} ${i18n.t('pendingChanges')}</span>
+            </div>
+        `;
+        statusBar.className = 'px-3 py-2 bg-yellow-50 border-b border-yellow-200 text-sm';
+    } else {
+        statusBar.innerHTML = '';
+        statusBar.className = 'hidden';
+    }
+}
+
 function renderListUI(list) {
     const app = document.getElementById('app');
     const state = store.getState();
     const items = state.items || [];
+    const syncState = sync.getState();
 
     const unboughtItems = items.filter(item => !item.is_bought);
     const boughtItems = items.filter(item => item.is_bought);
 
     app.innerHTML = `
+        <!-- Sync Status Bar -->
+        <div id="sync-status" class="${!syncState.isOnline ? 'px-3 py-2 bg-orange-50 border-b border-orange-200 text-sm' : 'hidden'}">
+            ${!syncState.isOnline ? `
+                <div class="flex items-center gap-2 text-orange-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m-3.536-3.536a4 4 0 010-5.656m-7.072 7.072a4 4 0 010-5.656m-3.536 3.536a9 9 0 010-12.728"></path>
+                    </svg>
+                    <span data-i18n="offline">${i18n.t('offline')}</span>
+                </div>
+            ` : ''}
+        </div>
+
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
             <button
@@ -232,6 +323,46 @@ function renderListUI(list) {
             </button>
 
             <div id="settings-panel" class="hidden mt-4 space-y-4">
+                <!-- Follow List Settings -->
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <h3 class="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                        </svg>
+                        <span data-i18n="followList">Følg liste</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">⭐</span>
+                                <div>
+                                    <p class="font-medium text-gray-700" data-i18n="followListLabel">Følg denne liste</p>
+                                    <p class="text-xs text-gray-500" data-i18n="followListDesc">Gør listen tilgængelig offline</p>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <input type="checkbox" id="follow-toggle" class="sr-only peer" data-list-id="${list.id}">
+                                <div class="w-11 h-6 bg-gray-300 peer-checked:bg-green-500 rounded-full transition"></div>
+                                <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                            </div>
+                        </label>
+                        <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition" id="notifications-label">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">🔔</span>
+                                <div>
+                                    <p class="font-medium text-gray-700" data-i18n="enableNotifications">Notifikationer</p>
+                                    <p class="text-xs text-gray-500" data-i18n="enableNotificationsDesc">Få besked når listen ændres</p>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <input type="checkbox" id="notifications-toggle" class="sr-only peer" data-list-id="${list.id}">
+                                <div class="w-11 h-6 bg-gray-300 peer-checked:bg-green-500 rounded-full transition"></div>
+                                <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Password Settings -->
                 <div class="bg-white rounded-xl shadow-lg p-4">
                     <h3 class="font-medium text-gray-800 mb-3" data-i18n="${list.has_password ? 'changePassword' : 'addPassword'}">${list.has_password ? 'Change Password' : 'Add Password'}</h3>
@@ -321,6 +452,26 @@ function renderListUI(list) {
 // Category order for sorting
 const CATEGORY_ORDER = ['produce', 'dairy', 'meat', 'bakery', 'frozen', 'pantry', 'beverages', 'snacks', 'household', 'personal', 'other', null];
 
+// Category emoji mapping
+const CATEGORY_EMOJI = {
+    produce: '🥬',
+    dairy: '🧀',
+    meat: '🥩',
+    bakery: '🥖',
+    frozen: '🧊',
+    pantry: '🥫',
+    beverages: '🥤',
+    snacks: '🍿',
+    household: '🧹',
+    personal: '🧴',
+    other: '📦',
+    null: '📝'
+};
+
+function getCategoryEmoji(category) {
+    return CATEGORY_EMOJI[category] || CATEGORY_EMOJI[null];
+}
+
 function groupItemsByCategory(items) {
     const groups = {};
 
@@ -352,10 +503,12 @@ function renderItemsByCategory(items, isBought) {
         const categoryLabel = group.category
             ? i18n.t(`types.${group.category}`)
             : i18n.t('uncategorized');
+        const categoryEmoji = getCategoryEmoji(group.category);
 
         return `
             <div class="category-group">
                 <div class="flex items-center gap-2 mb-2">
+                    <span class="text-sm">${categoryEmoji}</span>
                     <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">${categoryLabel}</span>
                     <div class="flex-1 h-px bg-gray-200"></div>
                 </div>
@@ -368,8 +521,11 @@ function renderItemsByCategory(items, isBought) {
 }
 
 function renderItem(item, isBought) {
+    const isPending = item.syncStatus === 'pending';
+    const isError = item.syncStatus === 'error';
+
     return `
-        <div class="bg-white rounded-lg shadow-sm p-3 flex items-start gap-3 ${isBought ? 'opacity-60' : ''}" data-item-id="${item.id}">
+        <div class="bg-white rounded-lg shadow-sm p-3 flex items-start gap-3 ${isBought ? 'opacity-60' : ''} ${isPending ? 'border-l-4 border-yellow-400' : ''} ${isError ? 'border-l-4 border-red-400' : ''}" data-item-id="${item.id}">
             <button
                 class="toggle-btn flex-shrink-0 mt-1 w-6 h-6 rounded-full border-2 ${isBought ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-green-500'} transition flex items-center justify-center"
                 data-item-id="${item.id}"
@@ -379,7 +535,11 @@ function renderItem(item, isBought) {
             </button>
 
             <div class="flex-1 min-w-0 cursor-pointer edit-item-btn" data-item-id="${item.id}">
-                <p class="text-gray-800 font-medium ${isBought ? 'line-through' : ''}">${escapeHtml(item.name)}</p>
+                <div class="flex items-center gap-2">
+                    <p class="text-gray-800 font-medium ${isBought ? 'line-through' : ''}">${escapeHtml(item.name)}</p>
+                    ${isPending ? '<span class="text-xs text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded">Pending</span>' : ''}
+                    ${isError ? '<span class="text-xs text-red-600 bg-red-100 px-1.5 py-0.5 rounded">Error</span>' : ''}
+                </div>
                 ${item.amount ? `<p class="text-sm text-gray-500">${escapeHtml(item.amount)}</p>` : ''}
                 ${item.note ? `<p class="text-sm text-gray-400 mt-1">${escapeHtml(item.note)}</p>` : ''}
             </div>
@@ -515,11 +675,51 @@ function setupListPageEvents(list) {
     document.getElementById('bought-list').addEventListener('click', handleItemAction);
 
     // Toggle settings
-    document.getElementById('toggle-settings').addEventListener('click', () => {
+    document.getElementById('toggle-settings').addEventListener('click', async () => {
         const panel = document.getElementById('settings-panel');
         const arrow = document.getElementById('settings-arrow');
         panel.classList.toggle('hidden');
         arrow.classList.toggle('rotate-180');
+
+        // Initialize follow/notification toggles when settings panel opens
+        if (!panel.classList.contains('hidden')) {
+            await initializeFollowToggles(list);
+        }
+    });
+
+    // Follow toggle
+    document.getElementById('follow-toggle').addEventListener('change', async (e) => {
+        const isFollowed = e.target.checked;
+        const notificationsToggle = document.getElementById('notifications-toggle');
+        const notificationsLabel = document.getElementById('notifications-label');
+
+        if (isFollowed) {
+            await db.followList(list.id);
+            notificationsLabel.style.opacity = '1';
+            notificationsLabel.style.pointerEvents = 'auto';
+        } else {
+            await db.unfollowList(list.id);
+            notificationsToggle.checked = false;
+            notificationsLabel.style.opacity = '0.5';
+            notificationsLabel.style.pointerEvents = 'none';
+        }
+    });
+
+    // Notifications toggle
+    document.getElementById('notifications-toggle').addEventListener('change', async (e) => {
+        const enabled = e.target.checked;
+        await db.setListNotifications(list.id, enabled);
+
+        if (enabled) {
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    e.target.checked = false;
+                    await db.setListNotifications(list.id, false);
+                }
+            }
+        }
     });
 
     // Password form
@@ -543,6 +743,30 @@ function setupListPageEvents(list) {
     });
 }
 
+async function initializeFollowToggles(list) {
+    const followToggle = document.getElementById('follow-toggle');
+    const notificationsToggle = document.getElementById('notifications-toggle');
+    const notificationsLabel = document.getElementById('notifications-label');
+
+    // Get current follow status from IndexedDB
+    const localList = await db.getList(list.id);
+    const isFollowed = localList?.isFollowed === true;
+    const notificationsEnabled = localList?.notificationsEnabled === true;
+
+    // Set checkbox states
+    followToggle.checked = isFollowed;
+    notificationsToggle.checked = notificationsEnabled;
+
+    // Disable notifications if not followed
+    if (!isFollowed) {
+        notificationsLabel.style.opacity = '0.5';
+        notificationsLabel.style.pointerEvents = 'none';
+    } else {
+        notificationsLabel.style.opacity = '1';
+        notificationsLabel.style.pointerEvents = 'auto';
+    }
+}
+
 async function handleAddItem(list) {
     const nameInput = document.getElementById('item-name');
     const amountInput = document.getElementById('item-amount');
@@ -552,8 +776,8 @@ async function handleAddItem(list) {
     const name = nameInput.value.trim();
     if (!name) return;
 
-    // Check if edit password is required
-    if (list.edit_requires_password) {
+    // Check if edit password is required (only when online)
+    if (list.edit_requires_password && sync.isOnline()) {
         const token = store.getAccessToken(currentListName);
         if (!token) {
             const verified = await showPasswordModal(list.id, 'edit');
@@ -568,24 +792,60 @@ async function handleAddItem(list) {
         note: noteInput?.value.trim() || null,
     };
 
-    try {
-        const token = store.getAccessToken(currentListName);
-        const newItem = await api.addItem(list.id, item, token);
+    // Clear form immediately for better UX
+    nameInput.value = '';
+    if (amountInput) amountInput.value = '';
+    if (typeSelect) typeSelect.value = '';
+    if (noteInput) noteInput.value = '';
 
-        store.addItem(newItem);
+    if (sync.isOnline()) {
+        // Online - add directly to server
+        try {
+            const token = store.getAccessToken(currentListName);
+            const newItem = await api.addItem(list.id, item, token);
 
-        // Clear form
-        nameInput.value = '';
-        if (amountInput) amountInput.value = '';
-        if (typeSelect) typeSelect.value = '';
-        if (noteInput) noteInput.value = '';
+            // Save to local DB
+            await db.saveItem({ ...newItem, syncStatus: 'synced' });
 
-        // Re-render
-        renderListUI(list);
-    } catch (error) {
-        console.error('Error adding item:', error);
-        alert(error.message || i18n.t('error'));
+            store.addItem(newItem);
+            renderListUI(list);
+        } catch (error) {
+            console.error('Error adding item:', error);
+            // Fallback to offline mode
+            await addItemOffline(list, item);
+        }
+    } else {
+        // Offline - add locally and queue for sync
+        await addItemOffline(list, item);
     }
+}
+
+async function addItemOffline(list, item) {
+    // Create temporary item with temp ID
+    const tempItem = {
+        id: db.generateTempId(),
+        list_id: list.id,
+        name: item.name,
+        amount: item.amount,
+        type: item.type,
+        note: item.note,
+        is_bought: false,
+        created_at: new Date().toISOString(),
+        syncStatus: 'pending'
+    };
+
+    // Save to local DB
+    await db.saveItem(tempItem);
+
+    // Queue for sync
+    await sync.queueOperation('ADD_ITEM', {
+        listId: list.id,
+        item: { ...tempItem, id: tempItem.id }
+    });
+
+    // Update store and UI
+    store.addItem(tempItem);
+    renderListUI(list);
 }
 
 async function handleItemAction(e) {
@@ -610,8 +870,8 @@ async function handleItemAction(e) {
         return;
     }
 
-    // Check edit permission for other actions
-    if ((toggleBtn || deleteBtn || editBtn) && list.edit_requires_password) {
+    // Check edit permission for other actions (only when online)
+    if ((toggleBtn || deleteBtn || editBtn) && list.edit_requires_password && sync.isOnline()) {
         const token = store.getAccessToken(currentListName);
         if (!token) {
             const verified = await showPasswordModal(list.id, 'edit');
@@ -622,27 +882,56 @@ async function handleItemAction(e) {
     if (toggleBtn) {
         const itemId = toggleBtn.dataset.itemId;
         const isBought = toggleBtn.dataset.bought === 'true';
-        const token = store.getAccessToken(currentListName);
+        const newBoughtState = !isBought;
 
-        try {
-            await api.toggleItemBought(itemId, !isBought, token);
-            store.updateItem(itemId, { is_bought: !isBought });
-            renderListUI(list);
-        } catch (error) {
-            console.error('Error toggling item:', error);
+        // Optimistic UI update
+        store.updateItem(itemId, { is_bought: newBoughtState, syncStatus: 'pending' });
+        renderListUI(list);
+
+        if (sync.isOnline()) {
+            try {
+                const token = store.getAccessToken(currentListName);
+                await api.toggleItemBought(itemId, newBoughtState, token);
+
+                // Update local DB
+                const item = await db.getItem(itemId);
+                if (item) {
+                    await db.saveItem({ ...item, is_bought: newBoughtState, syncStatus: 'synced' });
+                }
+                store.updateItem(itemId, { syncStatus: 'synced' });
+            } catch (error) {
+                console.error('Error toggling item:', error);
+                // Queue for later sync
+                await toggleItemOffline(itemId, newBoughtState);
+            }
+        } else {
+            // Offline - queue for sync
+            await toggleItemOffline(itemId, newBoughtState);
         }
     }
 
     if (deleteBtn) {
         const itemId = deleteBtn.dataset.itemId;
-        const token = store.getAccessToken(currentListName);
 
-        try {
-            await api.deleteItem(itemId, token);
-            store.removeItem(itemId);
-            renderListUI(list);
-        } catch (error) {
-            console.error('Error deleting item:', error);
+        // Optimistic UI update
+        store.removeItem(itemId);
+        renderListUI(list);
+
+        if (sync.isOnline()) {
+            try {
+                const token = store.getAccessToken(currentListName);
+                await api.deleteItem(itemId, token);
+
+                // Remove from local DB
+                await db.deleteItem(itemId);
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                // Queue for later sync
+                await deleteItemOffline(itemId);
+            }
+        } else {
+            // Offline - queue for sync
+            await deleteItemOffline(itemId);
         }
     }
 
@@ -668,6 +957,32 @@ async function handleItemAction(e) {
                 }
             }
         }
+    }
+}
+
+async function toggleItemOffline(itemId, isBought) {
+    // Update local DB
+    const item = await db.getItem(itemId);
+    if (item) {
+        await db.saveItem({ ...item, is_bought: isBought, syncStatus: 'pending' });
+    }
+
+    // Queue for sync
+    await sync.queueOperation('TOGGLE_ITEM', {
+        itemId,
+        isBought
+    });
+}
+
+async function deleteItemOffline(itemId) {
+    // Remove from local DB
+    await db.deleteItem(itemId);
+
+    // Queue for sync (only if not a temp item)
+    if (!db.isTempId(itemId)) {
+        await sync.queueOperation('DELETE_ITEM', {
+            itemId
+        });
     }
 }
 
