@@ -1,6 +1,7 @@
 {
   "name": "shopman",
-  "version": "1.0.0",
+  "version": "0.2.0",
+  "author": "kastruppro",
   "description": "Shopping list web app with password protection and bilingual support",
   "scripts": {
     "build:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css --minify",

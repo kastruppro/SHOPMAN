@@ -68,5 +68,8 @@
   "hasPassword": "Denne liste er beskyttet med adgangskode",
   "passwordUpdated": "Adgangskode opdateret",
   "passwordRemoved": "Adgangskode fjernet",
-  "listDeleted": "Liste slettet"
+  "listDeleted": "Liste slettet",
+  "uncategorized": "Uden kategori",
+  "editItem": "Rediger vare",
+  "saveChanges": "Gem"
 }

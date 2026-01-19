@@ -68,5 +68,8 @@
   "hasPassword": "This list is password protected",
   "passwordUpdated": "Password updated",
   "passwordRemoved": "Password removed",
-  "listDeleted": "List deleted"
+  "listDeleted": "List deleted",
+  "uncategorized": "Uncategorized",
+  "editItem": "Edit item",
+  "saveChanges": "Save"
 }

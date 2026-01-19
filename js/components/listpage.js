@@ -181,10 +181,10 @@ function renderListUI(list) {
                 <span class="text-sm font-normal text-gray-500">(${unboughtItems.length})</span>
             </h2>
 
-            <div id="items-list" class="space-y-2">
+            <div id="items-list" class="space-y-4">
                 ${unboughtItems.length === 0
                     ? `<p class="text-gray-500 text-center py-4 bg-white rounded-lg" data-i18n="noItems">No items yet. Add your first item above!</p>`
-                    : unboughtItems.map(item => renderItem(item, false)).join('')
+                    : renderItemsByCategory(unboughtItems, false)
                 }
             </div>
         </div>
@@ -199,10 +199,10 @@ function renderListUI(list) {
                 <span class="text-sm font-normal">(${boughtItems.length})</span>
             </h2>
 
-            <div id="bought-list" class="space-y-2">
+            <div id="bought-list" class="space-y-4">
                 ${boughtItems.length === 0
                     ? `<p class="text-gray-400 text-center py-4 bg-gray-50 rounded-lg" data-i18n="noBoughtItems">No bought items</p>`
-                    : boughtItems.map(item => renderItem(item, true)).join('')
+                    : renderItemsByCategory(boughtItems, true)
                 }
             </div>
         </div>
@@ -307,9 +307,56 @@ function renderListUI(list) {
     setupListPageEvents(list);
 }
 
-function renderItem(item, isBought) {
-    const typeLabel = item.type ? i18n.t(`types.${item.type}`) : '';
+// Category order for sorting
+const CATEGORY_ORDER = ['produce', 'dairy', 'meat', 'bakery', 'frozen', 'pantry', 'beverages', 'snacks', 'household', 'personal', 'other', null];
 
+function groupItemsByCategory(items) {
+    const groups = {};
+
+    items.forEach(item => {
+        const category = item.type || null;
+        if (!groups[category]) {
+            groups[category] = [];
+        }
+        groups[category].push(item);
+    });
+
+    // Sort categories by predefined order, with uncategorized (null) last
+    const sortedCategories = Object.keys(groups).sort((a, b) => {
+        const aIndex = CATEGORY_ORDER.indexOf(a === 'null' ? null : a);
+        const bIndex = CATEGORY_ORDER.indexOf(b === 'null' ? null : b);
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    });
+
+    return sortedCategories.map(cat => ({
+        category: cat === 'null' ? null : cat,
+        items: groups[cat]
+    }));
+}
+
+function renderItemsByCategory(items, isBought) {
+    const grouped = groupItemsByCategory(items);
+
+    return grouped.map(group => {
+        const categoryLabel = group.category
+            ? i18n.t(`types.${group.category}`)
+            : i18n.t('uncategorized');
+
+        return `
+            <div class="category-group">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">${categoryLabel}</span>
+                    <div class="flex-1 h-px bg-gray-200"></div>
+                </div>
+                <div class="space-y-2">
+                    ${group.items.map(item => renderItem(item, isBought)).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderItem(item, isBought) {
     return `
         <div class="bg-white rounded-lg shadow-sm p-3 flex items-start gap-3 ${isBought ? 'opacity-60' : ''}" data-item-id="${item.id}">
             <button
@@ -320,15 +367,9 @@ function renderItem(item, isBought) {
                 ${isBought ? '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' : ''}
             </button>
 
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 cursor-pointer edit-item-btn" data-item-id="${item.id}">
                 <p class="text-gray-800 font-medium ${isBought ? 'line-through' : ''}">${escapeHtml(item.name)}</p>
-                ${item.amount || typeLabel ? `
-                    <p class="text-sm text-gray-500">
-                        ${item.amount ? escapeHtml(item.amount) : ''}
-                        ${item.amount && typeLabel ? ' · ' : ''}
-                        ${typeLabel}
-                    </p>
-                ` : ''}
+                ${item.amount ? `<p class="text-sm text-gray-500">${escapeHtml(item.amount)}</p>` : ''}
                 ${item.note ? `<p class="text-sm text-gray-400 mt-1">${escapeHtml(item.note)}</p>` : ''}
             </div>
 
@@ -344,9 +385,61 @@ function renderItem(item, isBought) {
     `;
 }
 
-function getTypeOptions() {
+function renderEditForm(item) {
+    return `
+        <div class="bg-white rounded-lg shadow-lg p-4 border-2 border-green-500" data-item-id="${item.id}" data-editing="true">
+            <form class="edit-item-form space-y-3" data-item-id="${item.id}">
+                <input
+                    type="text"
+                    name="name"
+                    value="${escapeHtml(item.name)}"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                    data-i18n-placeholder="itemName"
+                    required
+                >
+                <div class="grid grid-cols-2 gap-2">
+                    <input
+                        type="text"
+                        name="amount"
+                        value="${item.amount ? escapeHtml(item.amount) : ''}"
+                        class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                        data-i18n-placeholder="amount"
+                    >
+                    <select
+                        name="type"
+                        class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                    >
+                        <option value="">-- ${i18n.t('type')} --</option>
+                        ${getTypeOptions(item.type)}
+                    </select>
+                </div>
+                <textarea
+                    name="note"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
+                    rows="2"
+                    data-i18n-placeholder="note"
+                >${item.note ? escapeHtml(item.note) : ''}</textarea>
+                <div class="flex gap-2">
+                    <button
+                        type="submit"
+                        class="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm"
+                        data-i18n="saveChanges"
+                    >${i18n.t('saveChanges')}</button>
+                    <button
+                        type="button"
+                        class="cancel-edit-btn px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm"
+                        data-item-id="${item.id}"
+                        data-i18n="cancel"
+                    >${i18n.t('cancel')}</button>
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+function getTypeOptions(selectedType = null) {
     const types = ['produce', 'dairy', 'meat', 'bakery', 'frozen', 'pantry', 'beverages', 'snacks', 'household', 'personal', 'other'];
-    return types.map(type => `<option value="${type}">${i18n.t(`types.${type}`)}</option>`).join('');
+    return types.map(type => `<option value="${type}" ${type === selectedType ? 'selected' : ''}>${i18n.t(`types.${type}`)}</option>`).join('');
 }
 
 function escapeHtml(text) {
@@ -468,11 +561,27 @@ async function handleAddItem(list) {
 async function handleItemAction(e) {
     const toggleBtn = e.target.closest('.toggle-btn');
     const deleteBtn = e.target.closest('.delete-btn');
+    const editBtn = e.target.closest('.edit-item-btn');
+    const cancelEditBtn = e.target.closest('.cancel-edit-btn');
+    const editForm = e.target.closest('.edit-item-form');
 
     const list = store.getState().currentList;
 
-    // Check edit permission
-    if (list.edit_requires_password) {
+    // Handle cancel edit
+    if (cancelEditBtn) {
+        renderListUI(list);
+        return;
+    }
+
+    // Handle edit form submit
+    if (editForm && e.type === 'submit') {
+        e.preventDefault();
+        await handleEditSubmit(editForm, list);
+        return;
+    }
+
+    // Check edit permission for other actions
+    if ((toggleBtn || deleteBtn || editBtn) && list.edit_requires_password) {
         const token = store.getAccessToken(currentListName);
         if (!token) {
             const verified = await showPasswordModal(list.id, 'edit');
@@ -505,6 +614,54 @@ async function handleItemAction(e) {
         } catch (error) {
             console.error('Error deleting item:', error);
         }
+    }
+
+    if (editBtn && !e.target.closest('[data-editing="true"]')) {
+        const itemId = editBtn.dataset.itemId;
+        const items = store.getState().items;
+        const item = items.find(i => i.id === itemId);
+
+        if (item) {
+            // Replace item card with edit form
+            const itemCard = document.querySelector(`[data-item-id="${itemId}"]:not([data-editing="true"])`);
+            if (itemCard) {
+                itemCard.outerHTML = renderEditForm(item);
+                i18n.updateDOM();
+
+                // Add submit listener to the new form
+                const form = document.querySelector(`.edit-item-form[data-item-id="${itemId}"]`);
+                if (form) {
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        await handleEditSubmit(form, list);
+                    });
+                }
+            }
+        }
+    }
+}
+
+async function handleEditSubmit(form, list) {
+    const itemId = form.dataset.itemId;
+    const formData = new FormData(form);
+
+    const updates = {
+        name: formData.get('name').trim(),
+        amount: formData.get('amount')?.trim() || null,
+        type: formData.get('type') || null,
+        note: formData.get('note')?.trim() || null,
+    };
+
+    if (!updates.name) return;
+
+    try {
+        const token = store.getAccessToken(currentListName);
+        await api.updateItem(itemId, updates, token);
+        store.updateItem(itemId, updates);
+        renderListUI(list);
+    } catch (error) {
+        console.error('Error updating item:', error);
+        alert(error.message || i18n.t('error'));
     }
 }
 
