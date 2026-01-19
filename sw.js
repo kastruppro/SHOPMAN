@@ -1,5 +1,5 @@
 // SHOPMAN Service Worker - Offline First PWA
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.1.0';
 const STATIC_CACHE = `shopman-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `shopman-dynamic-${CACHE_VERSION}`;
 
@@ -225,8 +225,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || 'Ny opdatering til din indkøbsliste',
-    icon: '/icons/icon.svg',
-    badge: '/icons/icon.svg',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-72.png',
     vibrate: [100, 50, 100],
     tag: notificationData.listId || 'shopman-notification',
     renotify: true,

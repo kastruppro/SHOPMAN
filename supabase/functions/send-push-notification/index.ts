@@ -246,8 +246,8 @@ serve(async (req) => {
         listName: listName,
         url: `/#list/${encodeURIComponent(listName)}`,
       },
-      icon: "/icons/icon.svg",
-      badge: "/icons/icon.svg",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-72.png",
     });
 
     // Send to all subscribers
