@@ -104,12 +104,23 @@ function renderListUI(list) {
                 <span data-i18n="back">Back</span>
             </button>
 
-            <button id="lang-toggle" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-gray-300 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                </svg>
-                <span id="lang-label">${i18n.currentLang === 'en' ? 'DA' : 'EN'}</span>
-            </button>
+            <div class="relative">
+                <button id="lang-dropdown-btn" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 bg-white rounded-lg shadow-sm border border-gray-200 hover:border-gray-300 transition">
+                    <span class="text-base">${i18n.currentLang === 'da' ? '🇩🇰' : '🇬🇧'}</span>
+                    <span>${i18n.currentLang === 'da' ? 'Dansk' : 'English'}</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="lang-dropdown" class="hidden absolute right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-10">
+                    <button class="lang-option w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${i18n.currentLang === 'da' ? 'bg-green-50 text-green-700' : ''}" data-lang="da">
+                        <span class="text-base">🇩🇰</span> Dansk
+                    </button>
+                    <button class="lang-option w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${i18n.currentLang === 'en' ? 'bg-green-50 text-green-700' : ''}" data-lang="en">
+                        <span class="text-base">🇬🇧</span> English
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- List Title -->
@@ -454,10 +465,29 @@ function setupListPageEvents(list) {
         router.goHome();
     });
 
-    // Language toggle
-    document.getElementById('lang-toggle').addEventListener('click', async () => {
-        await i18n.toggleLanguage();
-        renderListUI(list);
+    // Language dropdown
+    const dropdownBtn = document.getElementById('lang-dropdown-btn');
+    const dropdown = document.getElementById('lang-dropdown');
+
+    dropdownBtn.addEventListener('click', () => {
+        dropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#lang-dropdown-btn') && !e.target.closest('#lang-dropdown')) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    document.querySelectorAll('.lang-option').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const lang = btn.dataset.lang;
+            if (lang !== i18n.currentLang) {
+                await i18n.setLanguage(lang);
+                renderListUI(list);
+            }
+            dropdown.classList.add('hidden');
+        });
     });
 
     // Toggle extra options

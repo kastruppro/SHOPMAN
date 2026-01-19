@@ -1,17 +1,17 @@
+import config from './config.js';
+
 // Internationalization module
 const i18n = {
-    currentLang: 'en',
+    currentLang: config.defaultLanguage,
     translations: {},
 
     async init() {
-        // Load saved language preference or detect from browser
+        // Load saved language preference or use default from config
         const saved = localStorage.getItem('shopman-lang');
-        if (saved) {
+        if (saved && config.supportedLanguages.includes(saved)) {
             this.currentLang = saved;
         } else {
-            // Detect browser language
-            const browserLang = navigator.language.split('-')[0];
-            this.currentLang = browserLang === 'da' ? 'da' : 'en';
+            this.currentLang = config.defaultLanguage;
         }
 
         await this.loadTranslations(this.currentLang);
