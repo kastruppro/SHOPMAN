@@ -1,5 +1,5 @@
 // SHOPMAN Service Worker - Offline First PWA
-const CACHE_VERSION = 'v0.4.2';
+const CACHE_VERSION = 'v0.4.3';
 const STATIC_CACHE = `shopman-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `shopman-dynamic-${CACHE_VERSION}`;
 

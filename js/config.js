@@ -2,7 +2,7 @@
 const config = {
     defaultLanguage: 'da',
     supportedLanguages: ['da', 'en'],
-    version: '0.4.2',
+    version: '0.4.3',
 };
 
 export default config;
