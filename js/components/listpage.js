@@ -476,7 +476,7 @@ function renderListUI(list) {
         </div>
 
         <!-- Undo Toast -->
-        <div id="undo-toast" class="fixed bottom-4 left-4 right-4 max-w-lg mx-auto bg-gray-800 text-white rounded-lg shadow-lg p-4 flex items-center justify-between transform translate-y-full opacity-0 transition-all duration-300 z-50">
+        <div id="undo-toast" class="fixed bottom-12 left-4 right-4 max-w-lg mx-auto bg-gray-800 text-white rounded-lg shadow-lg p-4 flex items-center justify-between transform translate-y-full opacity-0 transition-all duration-300 z-50">
             <span id="undo-message" class="text-sm"></span>
             <button id="undo-btn" class="ml-4 px-4 py-1.5 bg-white text-gray-800 rounded font-medium text-sm hover:bg-gray-100 transition">
                 <span data-i18n="undo">Fortryd</span>

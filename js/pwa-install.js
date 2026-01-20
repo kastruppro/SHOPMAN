@@ -44,7 +44,7 @@ function showInstallBanner() {
 
     bannerElement = document.createElement('div');
     bannerElement.id = 'pwa-install-banner';
-    bannerElement.className = 'fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50 transform translate-y-full transition-transform duration-300';
+    bannerElement.className = 'fixed bottom-8 left-4 right-4 max-w-lg mx-auto bg-white rounded-xl border border-gray-200 shadow-lg p-4 z-50 transform translate-y-full transition-transform duration-300';
 
     if (isIOS) {
         // iOS-specific banner with instructions
